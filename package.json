@@ -1,0 +1,19 @@
+{
+  "name": "videofixer",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "discord.js": "^14.19.3"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "watch": "bun --watch index.ts"
+  }
+}
