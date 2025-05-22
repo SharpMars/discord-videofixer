@@ -53,6 +53,8 @@ client.on("messageCreate", async (message) => {
     }
   }
 
+  if (attachments.length == 0) return;
+
   message.reply({
     content: "Thy video wast broken. I mended it for convenience of all.",
     files: [...attachments],
