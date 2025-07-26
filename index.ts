@@ -1,7 +1,9 @@
 import { $ } from "bun";
 import {
   ActivityType,
+  Attachment,
   AttachmentBuilder,
+  ChannelType,
   Client,
   GatewayIntentBits,
 } from "discord.js";
@@ -32,7 +34,20 @@ client.on("messageCreate", async (message) => {
   if (message.member?.id == client.user?.id || message.attachments.size == 0)
     return;
 
+  const permissions = (await message.guild?.members.fetchMe())?.permissionsIn(
+    message.channelId
+  );
+
+  if (
+    !permissions?.has("SendMessages") ||
+    ((message.channel.type == ChannelType.PublicThread ||
+      message.channel.type == ChannelType.PrivateThread) &&
+      !permissions?.has("SendMessagesInThreads"))
+  )
+    return;
+
   const attachments: AttachmentBuilder[] = [];
+  const brokenVideos: Attachment[] = [];
 
   for (const attachment of message.attachments) {
     if (attachment[1].contentType === "video/mp4") {
@@ -41,16 +56,28 @@ client.on("messageCreate", async (message) => {
 
       const audio = raw_metadata.streams[1];
       if (audio.profile === "HE-AACv2") {
-        const fixedVideo = (
-          await $`ffmpeg -i ${attachment[1].proxyURL} -c:v copy -f mp4 -movflags 'frag_keyframe+empty_moov' -`.quiet()
-        ).bytes();
-        attachments.push(
-          new AttachmentBuilder(Buffer.from(fixedVideo), {
-            name: attachment[1].name,
-          })
-        );
+        brokenVideos.push(attachment[1]);
       }
     }
+  }
+
+  if (!permissions?.has("AttachFiles")) {
+    message.reply({
+      content:
+        "Thy video wast broken, but I'm unable to render assistance, for I possess not the permissions to do so.",
+    });
+    return;
+  }
+
+  for (const attachment of brokenVideos) {
+    const fixedVideo = (
+      await $`ffmpeg -i ${attachment.proxyURL} -c:v copy -f mp4 -movflags 'frag_keyframe+empty_moov' -`.quiet()
+    ).bytes();
+    attachments.push(
+      new AttachmentBuilder(Buffer.from(fixedVideo), {
+        name: attachment.name,
+      })
+    );
   }
 
   if (attachments.length == 0) return;
